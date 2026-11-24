@@ -40,7 +40,7 @@ jobs:
       - run: python -m pytest -q tests/test_ml.py
       - run: python -m ml.model
   end-to-end:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     needs: [backend, ml]
     env:

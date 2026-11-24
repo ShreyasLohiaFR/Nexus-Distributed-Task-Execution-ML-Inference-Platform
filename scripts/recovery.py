@@ -46,6 +46,8 @@ def main():
         assert killed["state"] == "RUNNING" and killed["attempts"] == 1, killed
     finally:
         compose("unpause", "ml")
+        # Reset stale unhealthy status before Compose checks dependencies.
+        compose("restart", "ml")
         compose("up", "-d", "--no-build", "worker")
     done = wait_for(key, job["id"], lambda j: j["state"] in {"SUCCEEDED", "FAILED", "CANCELLED"}, 90)
     assert done["state"] == "SUCCEEDED" and done["attempts"] == 2, done

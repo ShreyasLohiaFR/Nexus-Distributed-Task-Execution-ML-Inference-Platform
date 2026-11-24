@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>Nexus | Task Console</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><div class="brand"><span class="logo">N</span><div><strong>Nexus</strong><small>Distributed task console</small></div></div><div class="status"><span id="indicator"></span><span id="connection">Not connected</span></div></header>
+<main>
+  <section class="intro"><div><p class="eyebrow">WORKSPACE / OVERVIEW</p><h1>Execution overview</h1><p class="muted">Submit, schedule and inspect jobs across concurrent workers.</p></div><div class="key-box"><label for="key">Workspace API key</label><div class="inline"><input id="key" type="password" autocomplete="off" placeholder="Enter key"><button id="connect">Connect</button></div></div></section>
+  <section class="stats" aria-label="Queue statistics">
+    <article><small>QUEUED</small><strong id="QUEUED">—</strong></article><article><small>RUNNING</small><strong id="RUNNING">—</strong></article><article><small>SUCCEEDED</small><strong id="SUCCEEDED">—</strong></article><article><small>FAILED</small><strong id="FAILED">—</strong></article><article><small>CANCELLED</small><strong id="CANCELLED">—</strong></article>
+  </section>
+  <div class="workspace">
+    <section class="panel"><div class="panel-header"><h2>New job</h2><small>API submission</small></div>
+      <form id="submit">
+        <label for="kind">Task type</label><select id="kind"><option value="WORD_COUNT">Word count</option><option value="SHA256">SHA-256 hash</option><option value="DIGIT_CLASSIFY">Digit inference · ML</option></select>
+        <div id="text-field"><label for="payload">Text payload</label><textarea id="payload" maxlength="20000" rows="5" placeholder="Enter text to process…">Distributed systems make reliable computation possible.</textarea></div>
+        <div id="digit-field" hidden><label>Draw a digit (8 × 8)</label><p class="muted mini">Click or drag cells. A trained classifier predicts the digit.</p><div id="pixels" class="pixels" aria-label="Digit drawing grid"></div><div class="inline"><button class="secondary" type="button" id="clear">Clear</button><button class="secondary" type="button" id="sample">Example 1</button></div></div>
+        <div class="fields"><div><label for="priority">Priority (0–9)</label><input type="number" id="priority" min="0" max="9" value="5" required></div><div><label for="attempts">Max attempts</label><input type="number" id="attempts" min="1" max="5" value="3" required></div></div>
+        <label for="delay">Schedule delay (seconds)</label><input type="number" id="delay" min="0" max="86400" value="0" required>
+        <button class="primary" id="submit-button" disabled>Submit job</button><p id="form-message" role="status" class="mini"></p>
+      </form>
+    </section>
+    <section class="panel jobs"><div class="panel-header"><div><h2>Recent jobs</h2><small>Auto-refresh every 2 seconds</small></div><select id="filter" aria-label="Filter job state"><option value="">All states</option><option>QUEUED</option><option>RUNNING</option><option>SUCCEEDED</option><option>FAILED</option><option>CANCELLED</option></select></div><div class="table-wrap"><table><thead><tr><th>Job / type</th><th>State</th><th>Priority</th><th>Attempts</th><th>Action</th></tr></thead><tbody id="rows"><tr><td colspan="5" class="muted">Connect to view jobs.</td></tr></tbody></table></div><div id="details" class="details" hidden><div class="panel-header"><h3>Job details</h3><button class="secondary" id="close-details">Close</button></div><pre id="detail-json"></pre></div></section>
+  </div>
+  <footer>Nexus • Single-workspace development release • Jobs are at-least-once, not exactly-once.</footer>
+</main><script src="/app.js" defer></script></body></html>

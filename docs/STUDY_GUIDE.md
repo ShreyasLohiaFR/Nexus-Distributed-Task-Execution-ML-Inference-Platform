@@ -26,7 +26,7 @@ PostgreSQL provides transactions, row-level locks, partial indexes and a durable
 
 ## 5. Concurrency and reliability
 
-Each worker process has a fixed thread pool and semaphore. It only claims when a slot is available. Multiple processes can share PostgreSQL without in-memory coordination. Scheduled tasks poll and renew leases; database timestamps provide a common time source. Retries use 2^attempt seconds; no jitter is implemented. HTTP inference calls have a deadline. A hung local task is not covered by a generic execution timeout; implemented local tasks are bounded by payload size. Explain the tradeoffs, then implement jitter or fairness independently.
+Each worker process has a bounded number of consumer threads that claim and execute jobs continuously, waiting briefly when the queue is empty. Multiple processes can share PostgreSQL without in-memory coordination. Scheduled maintenance renews and recovers leases; database timestamps provide a common time source. Retries use 2^attempt seconds; no jitter is implemented. HTTP inference calls have a deadline. A hung local task is not covered by a generic execution timeout; implemented local tasks are bounded by payload size. Explain the tradeoffs, then implement jitter or fairness independently.
 
 ## 6. ML engineering
 
@@ -59,6 +59,6 @@ The API uses a single workspace key from environment variables and same-origin r
 
 **Can you cancel a running task instantly?** Not necessarily. The API clears the lease, marks CANCELLED, and blocks completion. Pure computation may finish; interruption or external rollback would require a separate contract.
 
-**What is your actual benchmark?** Use your own JSON files and hardware details. Before an integration run there is no verified distributed throughput figure.
+**What is your actual benchmark?** The verified CI experiment completed 1,000 jobs per configuration at 327.11 and 400.75 jobs/s, respectively. The two-process p95 completion latency was slightly worse (122.64 vs 116.42 ms). Explain submission overhead, short-run variability and why this is not a production capacity claim. See verification.md and reproduce locally.
 
-**What has been independently verified in the provided environment?** Six Python ML tests, five Java core assertions, JavaScript syntax, and a held-out model evaluation. The full DB integration suite and Compose need to pass on a real runtime.
+**What has been independently verified in the provided environment?** The linked release candidate CI passed 10 Java/PostgreSQL tests, 6 ML tests, Compose smoke, real worker termination recovery, Chromium integration and both benchmarks. See verification.md.

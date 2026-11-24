@@ -1,12 +1,24 @@
 # Verification plan
 
+## Release candidate evidence — 2026-11-24
+
+[Successful CI](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions/runs/45387632217), implementation commit `e5a32418968b59432f13589ff4ec9d52d3bcc950`: 10 Java/PostgreSQL tests and 6 ML tests passed. Compose smoke, real SIGKILL recovery (attempt 2, replacement worker), and Chromium submissions for all three task types, scheduling, cancellation, filtering and reload persistence passed. [Benchmark and dashboard artifact](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions/runs/45387632217/artifacts/14917474423) was uploaded; screenshot pixels have not been independently inspected.
+
+| Processes × threads | Successful jobs | Jobs/s | p95 submission (ms) | p95 queue-to-completion (ms) |
+|---|---:|---:|---:|---:|
+| 1 × 2 | 1000/1000 | 327.11 | 34.41 | 116.42 |
+| 2 × 2 | 1000/1000 | 400.75 | 25.36 | 122.64 |
+
+Eight clients, Ubuntu 24.04 hosted runner, zero submission errors, failed/cancelled or unfinished jobs in either run. Observed worker IDs: `worker-2608e772-ca74-4884-bb36-21c5e7ac3fc4` in both runs; additionally `worker-6ae4df2f-ad8d-4c46-b5f4-4397e71ac1ea` in the two-process run. Total observed times 3.057 and 2.495 seconds. Throughput includes submission and polling. Two processes yielded 22.5% higher observed throughput but 5.3% worse p95 completion latency. Single short runs, not a capacity guarantee or isolated causal comparison; repeat with controlled hardware and longer workloads. Held-out digits accuracy 97.78%, majority baseline 10.22%. No public deployment.
+
+
 ## Run evidence (provided environment)
 
 - `python -m pytest -q tests/test_ml.py`: 6 tests passed.
 - `javac -d <tmp> src/main/java/com/nexus/JobRules.java scripts/RuleSmoke.java && java -cp <tmp> RuleSmoke`: 5 core assertions passed.
 - `node --check src/main/resources/static/app.js`: syntax check passed.
 - Model report: `docs/ml-evaluation.json`, stratified held-out evaluation.
-- Full Maven, PostgreSQL and Docker stack: [CI run 45363232562](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions/runs/45363232562), commit `3d96048851315cee981c899d83fca75684baed70`, passed all three jobs. 9 Java tests, 6 Python tests, real SIGKILL recovery on attempt 2. Benchmark: 200/200 jobs completed in each configuration; 1x2: 21.78 jobs/s, p95 submission 27.32 ms, p95 completion 7880.81 ms; 2x2: 22.20 jobs/s, p95 submission 24.43 ms, p95 completion 8358.05 ms. These are single-run observations, not a scalability claim. [Benchmark artifact](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions/runs/45363232562/artifacts/14904609287). Subsequent release-candidate checks are not claimed until CI completes.
+- Full Maven, PostgreSQL and Docker stack: [CI run 45363232562](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions/runs/45363232562), commit `3d96048851315cee981c899d83fca75684baed70`, passed all three jobs. 9 Java tests, 6 Python tests, real SIGKILL recovery on attempt 2. Benchmark: 200/200 jobs completed in each configuration; 1x2: 21.78 jobs/s, p95 submission 27.32 ms, p95 completion 7880.81 ms; 2x2: 22.20 jobs/s, p95 submission 24.43 ms, p95 completion 8358.05 ms. These are single-run observations, not a scalability claim. [Benchmark artifact](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions/runs/45363232562/artifacts/14904609287). This is historical baseline evidence; see the release candidate above.
 
 ## Test matrix
 

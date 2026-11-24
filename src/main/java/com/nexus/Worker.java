@@ -41,16 +41,20 @@ public class Worker {
 
     @Scheduled(fixedDelay=250)
     public void poll() {
-        while (slots.tryAcquire()) {
+        while (!pool.isShutdown() && slots.tryAcquire()) {
             boolean handedOff = false;
+            JobStore.Claim claimed = null;
             try {
                 var next = store.claim(workerId);
                 if (next.isEmpty()) return;
                 var claim = next.get();
+                claimed = claim;
                 running.put(claim.job().id(), claim.token());
                 pool.submit(() -> run(claim));
                 handedOff = true;
             } catch (RuntimeException e) {
+                // If the executor rejects a claimed job during shutdown, stop renewing its lease.
+                if (claimed != null) running.remove(claimed.job().id(), claimed.token());
                 log.warn("Queue poll failed; will retry", e);
                 return;
             } finally {

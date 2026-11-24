@@ -2,7 +2,7 @@
 
 Nexus is a single-workspace, self-hosted asynchronous job service. It supports multiple independent Java workers, a PostgreSQL-backed queue, scheduled jobs, priority ordering, lease recovery, retries, cancellation, a monitoring console, and CPU-only ML digit inference. It is designed to show systems engineering decisions rather than collect technology buzzwords.
 
-**Development status:** initial implementation. The Python model and five Java core smoke assertions were run locally. Full Spring Boot/PostgreSQL integration tests, Docker build, worker-kill demonstrations, API smoke tests, and throughput benchmarks require a real PostgreSQL/Maven/Docker runtime. CI and scripts are configured for the applicable checks. Do not claim those results before running them. No public deployment has been made.
+**Development status:** initial implementation. The Python model and five Java core smoke assertions were run locally. Full Spring Boot/PostgreSQL integration tests, Docker build, worker-kill demonstrations, API smoke tests, and throughput benchmarks run through GitHub Actions or a local stack. Consult [CI runs](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions) and uploaded benchmark artifacts for verified results. No public deployment has been made.
 
 ## Architecture
 
@@ -73,7 +73,7 @@ On the installed Python/scikit-learn environment, a deterministic stratified 75/
 
 ## Known limits and security
 
-At-least-once execution; lease fencing protects committed state, not exactly-once external side effects. Cancellation invalidates the lease rather than killing arbitrary work. Bounded, pure tasks only. A workspace key is not multi-tenant auth. Strict priorities may starve lower-priority jobs. Polling is used instead of WebSockets to keep the implementation focused. No rate-limiting, TLS termination, retention, backup/restore, dependency audit, external load validation, or cloud hardening has been completed. The body size check rejects oversized declared lengths, not all chunked-body abuse. Do not expose the development stack publicly until those limitations are addressed.
+At-least-once execution; lease fencing protects committed state, not exactly-once external side effects. Cancellation invalidates the lease rather than killing arbitrary work. Bounded, pure tasks only. A workspace key is not multi-tenant auth. Strict priorities may starve lower-priority jobs. Polling is used instead of WebSockets to keep the implementation focused. No rate-limiting, TLS termination, retention, backup/restore, dependency audit, external load validation, or cloud hardening has been completed. Job submissions require a known Content-Length of at most 128 KiB. The dashboard uses same-origin requests; API responses are not cached and browser security headers are enabled. Reverse-proxy limits and rate limiting are still required before public exposure. Do not expose the development stack publicly until those limitations are addressed.
 
 ## Repository and learning
 

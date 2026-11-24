@@ -20,25 +20,37 @@ public class WorkspaceAuth extends OncePerRequestFilter {
         this.key = apiKey.getBytes(StandardCharsets.UTF_8);
     }
 
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getServletPath();
-        return !(path.startsWith("/api/") || path.equals("/actuator/prometheus"));
+    private boolean requiresKey(String path) {
+        return path.startsWith("/api/") || path.equals("/actuator/prometheus");
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String supplied = request.getHeader("X-API-Key");
-        if (supplied == null || !MessageDigest.isEqual(key, supplied.getBytes(StandardCharsets.UTF_8))) {
-            response.sendError(401);
-            return;
+        response.setHeader("X-Content-Type-Options", "nosniff");
+        response.setHeader("X-Frame-Options", "DENY");
+        response.setHeader("Referrer-Policy", "no-referrer");
+        response.setHeader("Content-Security-Policy",
+                "default-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+        String path = request.getServletPath();
+        if (requiresKey(path)) {
+            response.setHeader("Cache-Control", "no-store");
+            String supplied = request.getHeader("X-API-Key");
+            if (supplied == null || !MessageDigest.isEqual(key, supplied.getBytes(StandardCharsets.UTF_8))) {
+                response.sendError(401);
+                return;
+            }
+            long length = request.getContentLengthLong();
+            if (length > 131072) {
+                response.sendError(413);
+                return;
+            }
+            // The JSON submission API requires a known length. Other endpoints have no body.
+            if ("POST".equals(request.getMethod()) && "/api/jobs".equals(path) && length < 0) {
+                response.sendError(411);
+                return;
+            }
         }
-        if (request.getContentLengthLong() > 131072) {
-            response.sendError(413);
-            return;
-        }
-        response.setHeader("Cache-Control", "no-store");
         chain.doFilter(request, response);
     }
 }

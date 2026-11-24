@@ -20,12 +20,14 @@
 | Cancel running | JobStoreTest | CANCELLED; stale worker cannot complete |
 | ML contract | Python tests | invalid pixel arrays rejected; valid response in range |
 | End-to-end | scripts/smoke.py | real API, worker, DB and ML round trip |
+| API auth and validation | JobApiTest | 401 without key, invalid payload/size rejected, idempotency conflict |
+| Worker process loss | scripts/recovery.py | SIGKILL, expired lease, replacement worker succeeds on second attempt |
 
 ## Failure demonstration
 
 1. Start Compose and run `scripts/smoke.py` first.
 2. For a reliable crash-recovery exercise, stop workers, submit a job, and claim it in the database integration test (the test sets `lease_until` to the past to avoid a slow/flaky test). Run `mvn -Dtest=JobStoreTest#expiredLeaseIsRecoveredAndStaleWorkerCannotCommit test` against the disposable test DB.
-3. An actual process-kill experiment requires a long-running controlled task or pausing a worker right after claim, before completion. Current SHA256/word-count jobs finish very quickly. Do not claim a live kill test from the deterministic DB test. Add a bounded debug-only delay in a test branch, submit a task, wait for RUNNING, then `docker compose kill worker`; restart workers. Verify attempt count increments and eventual success with a new token. Delete the debug task before public use.
+3. On a disposable, idle Compose stack only, run `python scripts/recovery.py --isolated-compose`. It pauses ML to keep a real inference task in flight, waits for a claim, terminates the worker process with SIGKILL, restores ML and starts a replacement worker. The assertions require the original lease to remain RUNNING after termination, a second attempt, a different worker ID and eventual success. CI executes this test. Do not report a successful crash-recovery experiment until the workflow passes.
 4. With ML unavailable, digit jobs will fail/retry with backoff and eventually enter FAILED. Restart the service and submit a new task; verify it succeeds.
 
 ## Benchmark protocol

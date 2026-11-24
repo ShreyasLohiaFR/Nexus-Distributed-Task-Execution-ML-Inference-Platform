@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import time
 from playwright.sync_api import sync_playwright, expect
 
 BASE = "http://localhost:8080"
@@ -32,10 +33,21 @@ def main():
             return job["id"]
 
         def wait_state(job_id, state):
-            page.wait_for_function("""([id,state,key]) => fetch('/api/jobs/'+id, {headers:{'X-API-Key':key}})
-               .then(r=>r.ok?r.json():null).then(j=>j && j.state===state)""",
-                arg=[job_id, state, os.environ["NEXUS_API_KEY"]], timeout=30000, polling=250)
-            return page.request.get(BASE+"/api/jobs/"+job_id, headers={"X-API-Key":os.environ["NEXUS_API_KEY"]}).json()
+            # Poll the real API and return the same response that satisfied the predicate.
+            # Do not rely on a browser-side asynchronous predicate or a second read.
+            deadline = time.monotonic() + 30
+            headers = {"X-API-Key": os.environ["NEXUS_API_KEY"]}
+            last = None
+            while time.monotonic() < deadline:
+                response = page.request.get(BASE+"/api/jobs/"+job_id, headers=headers)
+                assert response.ok, response.status
+                last = response.json()
+                if last["state"] == state:
+                    return last
+                if last["state"] in {"SUCCEEDED", "FAILED", "CANCELLED"}:
+                    raise AssertionError(f"Expected {state}, got {last}")
+                time.sleep(.25)
+            raise AssertionError(f"Timed out waiting for {state}: {last}")
 
         word = submit("WORD_COUNT", "alpha beta gamma")
         assert wait_state(word, "SUCCEEDED")["result"]["words"] == 3

@@ -33,7 +33,7 @@ class JobApiTest {
     }
 
     @Test void publicAssetsAndMetricsBoundary() throws Exception {
-        mvc.perform(get("/").servletPath("/")).andExpect(status().isOk());
+        mvc.perform(get("/")).andExpect(status().isOk());
         mvc.perform(get("/actuator/prometheus").servletPath("/actuator/prometheus")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/stats;ignored=x").servletPath("/api/stats;ignored=x")).andExpect(status().isUnauthorized());
     }

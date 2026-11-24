@@ -52,17 +52,25 @@ jobs:
       - run: python scripts/smoke.py
       - name: Verify recovery after worker process termination
         run: python scripts/recovery.py --isolated-compose
+      - name: Install browser test dependencies
+        run: |
+          python -m pip install playwright==1.51.0
+          python -m playwright install --with-deps chromium
+      - name: Test real browser against live database and workers
+        run: python scripts/browser_test.py
       - name: Benchmark one worker process
-        run: python scripts/benchmark.py --jobs 200 --clients 8 --workers-label 1x2 --output benchmark-results-1x2.json
+        run: python scripts/benchmark.py --jobs 1000 --clients 8 --timeout 180 --workers-label 1x2 --output benchmark-results-1x2.json
       - name: Benchmark two worker processes
         run: |
-          docker compose up -d --no-build --scale worker=2
-          python scripts/benchmark.py --jobs 200 --clients 8 --workers-label 2x2 --output benchmark-results-2x2.json
+          docker compose up -d --no-build --wait --scale worker=2
+          python scripts/benchmark.py --jobs 1000 --clients 8 --timeout 180 --workers-label 2x2 --output benchmark-results-2x2.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: benchmark-reports
-          path: benchmark-results-*.json
+          path: |
+            benchmark-results-*.json
+            nexus-dashboard.png
           if-no-files-found: ignore
       - name: Diagnose failed stack
         if: failure()

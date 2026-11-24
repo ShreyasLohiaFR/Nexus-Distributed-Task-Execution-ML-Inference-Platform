@@ -6,7 +6,7 @@
 - `javac -d <tmp> src/main/java/com/nexus/JobRules.java scripts/RuleSmoke.java && java -cp <tmp> RuleSmoke`: 5 core assertions passed.
 - `node --check src/main/resources/static/app.js`: syntax check passed.
 - Model report: `docs/ml-evaluation.json`, stratified held-out evaluation.
-- Full Maven, PostgreSQL, and Docker stack: NOT run in the authoring environment (missing Maven/Docker/PostgreSQL, network restricted). CI is configured to execute the Java suite on a disposable database and the end-to-end smoke script against a fresh Compose stack. The code still needs full build and runtime validation.
+- Full Maven, PostgreSQL and Docker stack: [CI run 45363232562](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions/runs/45363232562), commit `3d96048851315cee981c899d83fca75684baed70`, passed all three jobs. 9 Java tests, 6 Python tests, real SIGKILL recovery on attempt 2. Benchmark: 200/200 jobs completed in each configuration; 1x2: 21.78 jobs/s, p95 submission 27.32 ms, p95 completion 7880.81 ms; 2x2: 22.20 jobs/s, p95 submission 24.43 ms, p95 completion 8358.05 ms. These are single-run observations, not a scalability claim. [Benchmark artifact](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions/runs/45363232562/artifacts/14904609287). Subsequent release-candidate checks are not claimed until CI completes.
 
 ## Test matrix
 

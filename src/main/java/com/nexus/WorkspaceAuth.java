@@ -21,7 +21,8 @@ public class WorkspaceAuth extends OncePerRequestFilter {
     }
 
     private boolean requiresKey(String path) {
-        return path.startsWith("/api/") || path.equals("/actuator/prometheus");
+        // Deny by default: only these exact read-only assets and health are public.
+        return !java.util.Set.of("/", "/index.html", "/style.css", "/app.js", "/actuator/health", "/favicon.ico").contains(path);
     }
 
     @Override
@@ -30,10 +31,12 @@ public class WorkspaceAuth extends OncePerRequestFilter {
         response.setHeader("X-Content-Type-Options", "nosniff");
         response.setHeader("X-Frame-Options", "DENY");
         response.setHeader("Referrer-Policy", "no-referrer");
+        response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
         response.setHeader("Content-Security-Policy",
                 "default-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
         String path = request.getServletPath();
-        if (requiresKey(path)) {
+        if (path.isEmpty()) path = request.getRequestURI().substring(request.getContextPath().length());
+        if (requiresKey(path) || !java.util.Set.of("GET", "HEAD").contains(request.getMethod())) {
             response.setHeader("Cache-Control", "no-store");
             String supplied = request.getHeader("X-API-Key");
             if (supplied == null || !MessageDigest.isEqual(key, supplied.getBytes(StandardCharsets.UTF_8))) {
@@ -46,7 +49,7 @@ public class WorkspaceAuth extends OncePerRequestFilter {
                 return;
             }
             // The JSON submission API requires a known length. Other endpoints have no body.
-            if ("POST".equals(request.getMethod()) && "/api/jobs".equals(path) && length < 0) {
+            if ("POST".equals(request.getMethod()) && length < 0) {
                 response.sendError(411);
                 return;
             }

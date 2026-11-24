@@ -17,6 +17,11 @@ class JobApiTest {
         {"kind":"WORD_COUNT","payload":{"text":"alpha beta"},"delaySeconds":3600}
         """;
     @Autowired MockMvc mvc;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate db;
+
+    @org.junit.jupiter.api.BeforeEach void requireTestDatabase() {
+        org.junit.jupiter.api.Assertions.assertEquals("nexus_test", db.queryForObject("select current_database()", String.class), "Use only a dedicated test database");
+    }
 
     @Test void workspaceRequiresAuthentication() throws Exception {
         mvc.perform(get("/api/stats").servletPath("/api/stats")).andExpect(status().isUnauthorized());
@@ -25,6 +30,12 @@ class JobApiTest {
         mvc.perform(get("/api/stats").servletPath("/api/stats").header("X-API-Key",KEY))
             .andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store"))
             .andExpect(header().string("X-Content-Type-Options","nosniff"));
+    }
+
+    @Test void publicAssetsAndMetricsBoundary() throws Exception {
+        mvc.perform(get("/").servletPath("/")).andExpect(status().isOk());
+        mvc.perform(get("/actuator/prometheus").servletPath("/actuator/prometheus")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/stats;ignored=x").servletPath("/api/stats;ignored=x")).andExpect(status().isUnauthorized());
     }
 
     @Test void invalidKindAndOversizedBodyAreRejected() throws Exception {

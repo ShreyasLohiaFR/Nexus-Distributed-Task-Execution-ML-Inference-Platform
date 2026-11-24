@@ -2,7 +2,7 @@
 
 Nexus is a single-workspace, self-hosted asynchronous job service. It supports multiple independent Java workers, a PostgreSQL-backed queue, scheduled jobs, priority ordering, lease recovery, retries, cancellation, a monitoring console, and CPU-only ML digit inference. It is designed to show systems engineering decisions rather than collect technology buzzwords.
 
-**Development status:** initial implementation. The Python model and five Java core smoke assertions were run locally. Full Spring Boot/PostgreSQL integration tests, Docker build, worker-kill demonstrations, API smoke tests, and throughput benchmarks run through GitHub Actions or a local stack. Consult [CI runs](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions) and uploaded benchmark artifacts for verified results. No public deployment has been made.
+**Verified baseline:** [CI run 45363232562](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions/runs/45363232562) passed Java/PostgreSQL integration tests, ML tests, Docker smoke, worker SIGKILL recovery and two 200-job benchmarks. See [verification evidence](docs/verification.md). The release candidate adds continuous worker consumption, dashboard submission protection, a real browser integration test and larger benchmarks. Consult the latest CI before treating those improvements as verified. No public backend deployment has been made.
 
 ## Architecture
 
@@ -25,12 +25,12 @@ Requires Docker Engine/Desktop with Compose v2. Run in a trusted local developme
 1. Copy `.env.example` to `.env`. Generate **two different random secrets** (e.g. `python -c "import secrets; print(secrets.token_urlsafe(32))"` twice), and put them in `DATABASE_PASSWORD` and `NEXUS_API_KEY`.
 2. Run `docker compose up --build -d` and check `docker compose ps` / `docker compose logs -f`.
 3. Open `http://localhost:8080` and enter the API key. Submit a job and observe the worker complete it.
-4. Scale independent worker processes with `docker compose up -d --scale worker=4`. `WORKER_CONCURRENCY` controls threads per worker (default 2).
+4. Scale independent worker processes with `docker compose up -d --scale worker=4`. `WORKER_CONCURRENCY` controls threads per worker (default 2); `WORKER_IDLE_POLL_MS` controls empty-queue polling (default 100 ms).
 5. Stop using `docker compose down`; the database volume remains. `docker compose down -v` **deletes local jobs**.
 
 ### REST endpoints
 
-All `/api/*` endpoints require `X-API-Key`. Health check `/actuator/health` is public locally; `/actuator/prometheus` requires the same key. The API uses UUIDs and accepts optional `Idempotency-Key` (same key + same request returns the existing job; reuse with a different request returns 409).
+All `/api/*` endpoints require `X-API-Key`. The application protects all routes by default except exact dashboard assets and read-only health. Health check `/actuator/health` is public locally; `/actuator/prometheus` requires the same key. The API uses UUIDs and accepts optional `Idempotency-Key` (same key + same request returns the existing job; reuse with a different request returns 409).
 
 | Method | Endpoint | Purpose |
 |---|---|---|

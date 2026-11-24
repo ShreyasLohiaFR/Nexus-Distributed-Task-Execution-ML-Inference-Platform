@@ -47,12 +47,18 @@ services:
       <<: *service-env
       WORKER_ENABLED: 'true'
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
+      NEXUS_WORKER_IDLE_POLL_MS: ${WORKER_IDLE_POLL_MS:-100}
       SPRING_SQL_INIT_MODE: never
     depends_on:
       api:
         condition: service_healthy
       ml:
         condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://localhost:8080/actuator/health']
+      interval: 4s
+      timeout: 3s
+      retries: 30
     stop_grace_period: 25s
 volumes:
   nexus-data:

@@ -2,9 +2,9 @@
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>Nexus | Task Console</title><link rel="stylesheet" href="/style.css"></head>
 <body>
-<header><div class="brand"><span class="logo">N</span><div><strong>Nexus</strong><small>Distributed task console</small></div></div><div class="status"><span id="indicator"></span><span id="connection">Not connected</span></div></header>
+<header><div class="brand"><span class="logo">N</span><div><strong>Nexus</strong><small>Distributed task console</small></div></div><div class="status" role="status" aria-live="polite"><span id="indicator"></span><span id="connection">Not connected</span></div></header>
 <main>
-  <section class="intro"><div><p class="eyebrow">WORKSPACE / OVERVIEW</p><h1>Execution overview</h1><p class="muted">Submit, schedule and inspect jobs across concurrent workers.</p></div><div class="key-box"><label for="key">Workspace API key</label><div class="inline"><input id="key" type="password" autocomplete="off" placeholder="Enter key"><button id="connect">Connect</button></div></div></section>
+  <section class="intro"><div><p class="eyebrow">WORKSPACE / OVERVIEW</p><h1>Execution overview</h1><p class="muted">Submit, schedule and inspect jobs across concurrent workers.</p><p class="mini muted">Live workspace · jobs and results are persisted in PostgreSQL.</p></div><div class="key-box"><label for="key">Workspace API key</label><div class="inline"><input id="key" type="password" autocomplete="off" placeholder="Enter key"><button id="connect">Connect</button></div></div></section>
   <section class="stats" aria-label="Queue statistics">
     <article><small>QUEUED</small><strong id="QUEUED">—</strong></article><article><small>RUNNING</small><strong id="RUNNING">—</strong></article><article><small>SUCCEEDED</small><strong id="SUCCEEDED">—</strong></article><article><small>FAILED</small><strong id="FAILED">—</strong></article><article><small>CANCELLED</small><strong id="CANCELLED">—</strong></article>
   </section>

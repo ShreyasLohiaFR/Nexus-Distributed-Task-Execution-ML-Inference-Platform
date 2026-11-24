@@ -68,6 +68,7 @@ def main():
         # Poll individual IDs, not global queue totals. DB timestamps provide queue-to-terminal latency.
         pending = set(submissions)
         terminal = {}
+        terminal_jobs = {}
         completion_ms = []
         deadline = start + args.timeout
         while pending and time.monotonic() < deadline:
@@ -83,6 +84,7 @@ def main():
                 if job is not None:
                     pending.remove(job_id)
                     terminal[job_id] = job["state"]
+                    terminal_jobs[job_id] = job
                     if job["state"] == "SUCCEEDED":
                         created = datetime.fromisoformat(job["createdAt"].replace("Z", "+00:00"))
                         updated = datetime.fromisoformat(job["updatedAt"].replace("Z", "+00:00"))
@@ -95,6 +97,7 @@ def main():
     report = {"timestamp_utc": datetime.now(timezone.utc).isoformat(), "workers_label": args.workers_label,
               "requested": args.jobs, "accepted": len(submissions), "submission_errors": len(failures),
               "succeeded": success, "failed_or_cancelled": len(terminal)-success, "unfinished": len(pending),
+              "worker_ids_observed": sorted({job.get("workerId") for job in terminal_jobs.values() if job.get("workerId")}),
               "clients": args.clients, "submission_seconds": round(submit_duration, 3),
               "observed_total_seconds": round(elapsed, 3), "observed_successes_per_second": round(success/elapsed, 2),
               "submit_latency_ms": {"p50": percentile(response_times, .50), "p95": percentile(response_times, .95)},

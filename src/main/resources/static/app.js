@@ -3,6 +3,9 @@ const $ = id => document.getElementById(id);
 let key = '';
 let connected = false;
 let refreshRunning = false;
+let submitting = false;
+let pendingSubmission = null;
+let session = 0;
 let selectedJob = null;
 const pixels = Array(64).fill(0);
 const states = ['QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED'];
@@ -19,7 +22,7 @@ function connection(ok, message) {
   connected = ok;
   $('connection').textContent = message;
   $('indicator').classList.toggle('live', ok);
-  $('submit-button').disabled = !ok;
+  $('submit-button').disabled = !ok || submitting;
 }
 function textCell(row, text) {
   const td = document.createElement('td');
@@ -64,17 +67,31 @@ function showDetails(job) {
 async function refresh() {
   if (!key || refreshRunning) return;
   refreshRunning = true;
+  const currentSession = session;
   try {
     const query = $('filter').value ? '?state=' + encodeURIComponent($('filter').value) : '';
     const [counts, jobs] = await Promise.all([request('/stats'), request('/jobs' + query)]);
+    if (session !== currentSession) return;
     for (const s of states) $(s).textContent = counts[s] ?? 0;
     renderRows(jobs);
-    if (selectedJob) showDetails(await request(`/jobs/${selectedJob}`));
+    const viewed = selectedJob;
+    if (viewed) {
+      const details = await request(`/jobs/${viewed}`);
+      if (session !== currentSession) return;
+      if (selectedJob === viewed) showDetails(details);
+    }
     connection(true, 'Connected');
-  } catch (e) { connection(false, `Unavailable · ${e.message}`); }
-  finally { refreshRunning = false; }
+  } catch (e) { if (session === currentSession) connection(false, `Unavailable · ${e.message}`); }
+  finally { refreshRunning = false; if (session !== currentSession) refresh(); }
 }
-$('connect').addEventListener('click', () => { key = $('key').value.trim(); $('key').value = ''; selectedJob = null; $('details').hidden = true; refresh(); });
+$('connect').addEventListener('click', () => {
+  if (submitting) return;
+  session++; key = $('key').value.trim(); $('key').value = ''; selectedJob = null; pendingSubmission = null;
+  $('details').hidden = true; $('detail-json').textContent = ''; $('rows').replaceChildren();
+  for (const s of states) $(s).textContent = '—';
+  connection(false, key ? 'Connecting…' : 'Enter workspace key'); refresh();
+});
+$('key').addEventListener('keydown', e => { if (e.key === 'Enter') $('connect').click(); });
 $('filter').addEventListener('change', refresh);
 $('close-details').addEventListener('click', () => { selectedJob = null; $('details').hidden = true; });
 $('kind').addEventListener('change', () => {
@@ -92,15 +109,19 @@ for (let i = 0; i < 64; i++) {
 $('clear').onclick = () => pixels.forEach((_, i) => setPixel(i, 0));
 $('sample').onclick = () => { const pattern = ['00011000','00111000','01111000','00011000','00011000','00011000','00111100','00000000'].join(''); [...pattern].forEach((n,i) => setPixel(i, Number(n)*16)); };
 $('submit').addEventListener('submit', async e => {
-  e.preventDefault(); if (!connected) return;
-  const button = $('submit-button'); button.disabled = true;
+  e.preventDefault(); if (!connected || submitting) return;
+  submitting = true;
+  const button = $('submit-button'); button.disabled = true; $('connect').disabled = true;
   const message = $('form-message');
   const kind = $('kind').value;
   const data = {kind, payload:kind === 'DIGIT_CLASSIFY' ? {pixels:[...pixels]} : {text:$('payload').value}, priority:Number($('priority').value), maxAttempts:Number($('attempts').value), delaySeconds:Number($('delay').value)};
   try {
-    const job = await request('/jobs', {method:'POST', headers:{'Idempotency-Key':crypto.randomUUID()}, body:JSON.stringify(data)});
+    const body = JSON.stringify(data);
+    if (!pendingSubmission || pendingSubmission.body !== body) pendingSubmission = {body, id:crypto.randomUUID()};
+    const job = await request('/jobs', {method:'POST', headers:{'Idempotency-Key':pendingSubmission.id}, body});
+    pendingSubmission = null;
     message.textContent = `Accepted job ${job.id.slice(0,8)}`; message.className = 'mini success'; selectedJob = job.id; await refresh();
-  } catch(e) { message.textContent = `Submission failed: ${e.message}. Inspect jobs before retrying.`; message.className = 'mini error'; }
-  finally { button.disabled = !connected; }
+  } catch(e) { message.textContent = `Submission not confirmed: ${e.message}. Retry the unchanged form to reuse the request key.`; message.className = 'mini error'; }
+  finally { submitting = false; button.disabled = !connected; $('connect').disabled = false; }
 });
 setInterval(refresh, 2000);

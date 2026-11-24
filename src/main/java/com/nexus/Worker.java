@@ -1,6 +1,7 @@
 package com.nexus;
 
 import jakarta.annotation.PreDestroy;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,7 +13,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -26,39 +26,47 @@ public class Worker {
     private final TaskExecutor tasks;
     private final MeterRegistry metrics;
     private final ExecutorService pool;
-    private final Semaphore slots;
+    private final int concurrency;
+    private final long idlePollMillis;
     private final Map<UUID, UUID> running = new ConcurrentHashMap<>();
 
     public Worker(JobStore store, TaskExecutor tasks, MeterRegistry metrics,
-                  @Value("${nexus.worker.concurrency}") int concurrency) {
+                  @Value("${nexus.worker.concurrency}") int concurrency,
+                  @Value("${nexus.worker.idle-poll-ms:100}") long idlePollMillis) {
         if (concurrency < 1 || concurrency > 32) throw new IllegalArgumentException("worker concurrency must be 1–32");
         this.store = store;
         this.tasks = tasks;
         this.metrics = metrics;
         this.pool = Executors.newFixedThreadPool(concurrency);
-        this.slots = new Semaphore(concurrency);
+        if (idlePollMillis < 25 || idlePollMillis > 1000) throw new IllegalArgumentException("idle poll must be 25–1000 ms");
+        this.concurrency = concurrency;
+        this.idlePollMillis = idlePollMillis;
     }
 
-    @Scheduled(fixedDelay=250)
-    public void poll() {
-        while (!pool.isShutdown() && slots.tryAcquire()) {
-            boolean handedOff = false;
-            JobStore.Claim claimed = null;
+    @PostConstruct
+    public void start() {
+        for (int i = 0; i < concurrency; i++) pool.submit(this::consume);
+    }
+
+    private void consume() {
+        while (!pool.isShutdown() && !Thread.currentThread().isInterrupted()) {
             try {
                 var next = store.claim(workerId);
-                if (next.isEmpty()) return;
-                var claim = next.get();
-                claimed = claim;
-                running.put(claim.job().id(), claim.token());
-                pool.submit(() -> run(claim));
-                handedOff = true;
-            } catch (RuntimeException e) {
-                // If the executor rejects a claimed job during shutdown, stop renewing its lease.
-                if (claimed != null) running.remove(claimed.job().id(), claimed.token());
-                log.warn("Queue poll failed; will retry", e);
+                if (next.isPresent()) {
+                    var claim = next.get();
+                    running.put(claim.job().id(), claim.token());
+                    run(claim);
+                    // No fixed-delay scheduling gap between completed jobs.
+                } else {
+                    Thread.sleep(idlePollMillis);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 return;
-            } finally {
-                if (!handedOff) slots.release();
+            } catch (RuntimeException e) {
+                log.warn("Queue consumer failed; will retry", e);
+                try { Thread.sleep(Math.max(idlePollMillis, 250)); }
+                catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); return; }
             }
         }
     }
@@ -98,7 +106,6 @@ public class Worker {
             }
         } finally {
             running.remove(id, token);
-            slots.release();
             metrics.counter("nexus.jobs.attempts", "kind", claim.job().kind(), "outcome", outcome).increment();
             start.stop(metrics.timer("nexus.job.execution", "kind", claim.job().kind()));
         }

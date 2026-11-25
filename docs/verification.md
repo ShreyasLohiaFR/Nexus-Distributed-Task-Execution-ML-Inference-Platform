@@ -1,5 +1,19 @@
 # Verification plan
 
+## Repeated scaling experiment — 2026-11-25
+
+[Passing PR CI](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions/runs/45570285078), tested head `3a7f1e28bfe42e2d6b764432e4b4810abbd0d3e0`, merged as `db6e5267b64247d36e574f205cf619c5a8d6e077`. All Java, ML, Docker smoke, worker-termination recovery, Chromium and benchmark checks passed. [Raw benchmark artifact](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions/runs/45570285078/artifacts/15002320554).
+
+| Worker processes × threads | Trials | Successful jobs | Median jobs/s | Range jobs/s | Median run p95 submission (ms) | Median run p95 completion (ms) |
+|---|---:|---:|---:|---:|---:|---:|
+| 1 × 2 | 3 | 3000/3000 | 520.45 | 439.71–568.20 | 13.52 | 195.63 |
+| 2 × 2 | 3 | 3000/3000 | 522.44 | 465.73–577.78 | 20.33 | 253.46 |
+| 4 × 2 | 3 | 3000/3000 | 428.24 | 421.66–607.26 | 24.85 | 185.39 |
+
+All 9,000 requested jobs passed the correctness gates, with zero failed, cancelled or unfinished jobs and zero submission errors. Two workers had nearly the same median throughput as one; four workers were slower at the median and more variable. Potential causes include database contention, shared runner resources, API submission/polling overhead and a growing database; no root cause has yet been isolated. These short SHA256 workloads with eight clients are not a production capacity guarantee. Reported latency is the median of run-level p95 values, not a pooled percentile. Do not compare different CI runners as an isolated speedup experiment.
+
+Reproduce only on a disposable local stack with the API key exported: `python scripts/benchmark_matrix.py --isolated-compose --jobs 1000 --repeats 3 --workers 1 2 4`. Raw JSON and summary are retained in the output directory.
+
 ## Release candidate evidence — 2026-11-24
 
 [Successful CI](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions/runs/45387632217), implementation commit `e5a32418968b59432f13589ff4ec9d52d3bcc950`: 10 Java/PostgreSQL tests and 6 ML tests passed. Compose smoke, real SIGKILL recovery (attempt 2, replacement worker), and Chromium submissions for all three task types, scheduling, cancellation, filtering and reload persistence passed. [Benchmark and dashboard artifact](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions/runs/45387632217/artifacts/14917474423) was uploaded; screenshot pixels have not been independently inspected.

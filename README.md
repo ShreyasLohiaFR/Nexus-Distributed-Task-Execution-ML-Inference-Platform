@@ -2,7 +2,7 @@
 
 Nexus is a single-workspace, self-hosted asynchronous job service. It supports multiple independent Java workers, a PostgreSQL-backed queue, scheduled jobs, priority ordering, lease recovery, retries, cancellation, a monitoring console, and CPU-only ML digit inference. It is designed to show systems engineering decisions rather than collect technology buzzwords.
 
-**Verified release candidate:** [CI run 45387632217](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions/runs/45387632217) passed Java/PostgreSQL, ML, Compose smoke, SIGKILL recovery, Chromium browser integration and 2,000 benchmark jobs. Observed throughput: 327.11 jobs/s (one process), 400.75 jobs/s (two processes), two threads each. See [verification evidence](docs/verification.md) for latency, limitations and artifact links. No public backend deployment has been made.
+**Verified release:** [CI run 45570285078](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions/runs/45570285078) passed Java/PostgreSQL, ML, Compose smoke, worker-kill recovery, Chromium and a repeated 9,000-job scaling experiment. Median throughput across three trials: 520.45 jobs/s (one worker), 522.44 (two), 428.24 (four), two threads per worker. All 9,000 jobs succeeded; four workers did not improve median throughput. See [verification evidence](docs/verification.md) for variability, latency, raw artifacts and limitations. No public backend deployment has been made.
 
 ## Architecture
 

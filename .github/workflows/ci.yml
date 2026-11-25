@@ -37,7 +37,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r ml/requirements.txt pytest httpx
-      - run: python -m pytest -q tests/test_ml.py
+      - run: python -m pytest -q tests/test_ml.py tests/test_benchmark_matrix.py
       - run: python -m ml.model
   end-to-end:
     runs-on: ubuntu-24.04
@@ -64,6 +64,8 @@ jobs:
         run: |
           docker compose up -d --no-build --wait --scale worker=2
           python scripts/benchmark.py --jobs 1000 --clients 8 --timeout 180 --workers-label 2x2 --output benchmark-results-2x2.json
+      - name: Repeat scaling experiment across 1, 2 and 4 worker processes
+        run: python scripts/benchmark_matrix.py --isolated-compose --jobs 1000 --repeats 3 --workers 1 2 4 --output scaling-results
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -71,6 +73,7 @@ jobs:
           path: |
             benchmark-results-*.json
             nexus-dashboard.png
+            scaling-results/*.json
           if-no-files-found: ignore
       - name: Diagnose failed stack
         if: failure()

@@ -67,6 +67,10 @@ python scripts/benchmark.py --jobs 100 --clients 8 --workers-label '1 process x 
 
 The Maven suite refuses to delete jobs unless the configured database is named `nexus_test`. Use a disposable database. GitHub Actions supplies a dedicated `nexus_test` database. It does not automatically deploy or provision paid services. See [verification plan](docs/verification.md) for concurrency and crash recovery exercises.
 
+## Local observability
+
+The optional [Prometheus/Grafana overlay](docs/observability.md) provides authenticated API and worker metrics, DNS worker discovery and a provisioned six-panel operations dashboard. [PR CI 45572324465](https://github.com/ShreyasLohiaFR/Nexus-Distributed-Task-Execution-ML-Inference-Platform/actions/runs/45572324465) verified live scrape targets (API and two workers), real JVM/JDBC metrics and dashboard provisioning, alongside the existing backend, ML and end-to-end checks. Merged in `e905adbf1e74992c3f98ee923451c626fc97305f`. Localhost only; no public monitoring or backend deployment.
+
 ## Measured ML experiment
 
 On the installed Python/scikit-learn environment, a deterministic stratified 75/25 split of 1,797 handwritten digit samples produced **97.78% held-out accuracy**, **97.76% macro-F1**, and **10.22% majority-class baseline accuracy** (450 held-out samples). See [raw report](docs/ml-evaluation.json). This is a simple baseline model for the built-in digits dataset, not a claim of general handwriting accuracy or novel research. The dashboard's hand-drawn binary grid has a distribution shift from the grayscale training set.
